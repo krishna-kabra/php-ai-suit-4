@@ -1,0 +1,160 @@
+{
+    "info": {
+        "name": "Provider Auth API",
+        "description": "Collection for testing Provider Authentication endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Provider Registration",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/provider/register",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "provider", "register"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": {
+                        "first_name": "John",
+                        "last_name": "Doe",
+                        "email": "john.doe@example.com",
+                        "phone_number": "+1234567890",
+                        "password": "SecureP@ss123",
+                        "specialization": "General Practice",
+                        "license_number": "GP12345",
+                        "years_of_experience": 5,
+                        "clinic_address": {
+                            "street": "123 Main St",
+                            "city": "Los Angeles",
+                            "state": "CA",
+                            "zip": "90001"
+                        }
+                    }
+                },
+                "description": "Register a new provider"
+            }
+        },
+        {
+            "name": "Provider Login",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/provider/login",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "provider", "login"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": {
+                        "identifier": "john.doe@example.com",
+                        "password": "SecureP@ss123",
+                        "remember_me": false
+                    }
+                },
+                "description": "Login with email/phone and password"
+            }
+        },
+        {
+            "name": "Refresh Token",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/provider/refresh",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "provider", "refresh"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": {
+                        "refresh_token": "{{refresh_token}}"
+                    }
+                },
+                "description": "Get new access token using refresh token"
+            }
+        },
+        {
+            "name": "Provider Logout",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/provider/logout",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "provider", "logout"]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": {
+                        "refresh_token": "{{refresh_token}}"
+                    }
+                },
+                "description": "Logout and invalidate current token"
+            }
+        },
+        {
+            "name": "Provider Logout All",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{access_token}}"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/provider/logout-all",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "provider", "logout-all"]
+                },
+                "description": "Logout from all devices"
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8000"
+        },
+        {
+            "key": "access_token",
+            "value": ""
+        },
+        {
+            "key": "refresh_token",
+            "value": ""
+        }
+    ]
+}
