@@ -11,6 +11,7 @@ import RoleProtectedRoute from './components/RoleProtectedRoute';
 import Unauthorized from './components/Unauthorized';
 import Navbar from './components/Navbar';
 import './App.css';
+import BookAppointment from './components/BookAppoinment';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -47,10 +48,10 @@ function App() {
           />
           {/* Example of patient-protected route */}
           <Route
-            path="/patient-dashboard"
+            path="/patient/dashboard"
             element={
               <RoleProtectedRoute allowedRole="patient">
-                <div>Patient Dashboard Component</div>
+                <BookAppointment />
               </RoleProtectedRoute>
             }
           />

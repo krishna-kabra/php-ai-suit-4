@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\ProviderController;
 use App\Http\Controllers\Api\V1\PatientController;
 use App\Http\Controllers\Api\V1\Auth\ProviderAuthController;
+use App\Http\Controllers\BookAppoinmentController;
 use App\Http\Controllers\ProviderAvailabilityController;
 use App\Http\Controllers\SpecializationController;
 
@@ -49,16 +50,15 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/verify-phone', [PatientController::class, 'verifyPhone']);
     });
-
-    // Route::middleware('auth:api')->group(function () {
-    //     Route::post('/provider/availability', [ProviderAvailabilityController::class, 'store']);
-    //     Route::get('/provider/{provider}/availability', [ProviderAvailabilityController::class, 'index']);
-    //     Route::put('/provider/availability/{slot}', [ProviderAvailabilityController::class, 'update']);
-    //     Route::delete('/provider/availability/{slot}', [ProviderAvailabilityController::class, 'destroy']);
-    // });
+    
+    // Route::get('/appointment/slots', [AppointmentController::class, 'getAvailableSlots']);
+    
+    Route::get('/appointment-slots', [BookAppoinmentController::class, 'getAvailableSlots']);
+    Route::post('/book-appointment', [BookAppoinmentController::class, 'bookAppointment']);
 
 
 });
+
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
