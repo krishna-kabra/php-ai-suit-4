@@ -1,76 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { FiUpload } from 'react-icons/fi';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../services/api';
 
 const ProviderRegister = () => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
     email: '',
-    phone: '',
-    profilePhoto: null,
-    licenseDocument: null,
-    licenseNumber: '',
-    specialization: '',
-    experience: '',
-    qualifications: '',
-    clinicName: '',
-    street: '',
-    city: '',
-    state: '',
-    zip: '',
-    practiceType: '',
     password: '',
-    confirmPassword: '',
-    agreeToTerms: false,
+    password_confirmation: '',
+    phone_number: '',
+    specialization_id: '',
+    license_number: '',
+    years_of_experience: '',
+    address: '',
+    bio: ''
   });
-
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(false);
   const [specializations, setSpecializations] = useState([]);
-  const [passwordStrength, setPasswordStrength] = useState(0);
-  const [imagePreview, setImagePreview] = useState(null);
-
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchSpecializations = async () => {
-      try {
-        const response = await api.get('/provider/specializations');
-        setSpecializations(response.data.data);
-      } catch (error) {
-        toast.error('Failed to load specializations');
-      }
-    };
     fetchSpecializations();
   }, []);
 
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: { 'image/*': [] },
-    onDrop: (acceptedFiles) => {
-      setFormData({ ...formData, profilePhoto: acceptedFiles[0] });
-      setImagePreview(URL.createObjectURL(acceptedFiles[0]));
-    },
-  });
-
-  const checkPasswordStrength = (password) => {
-    let strength = 0;
-    if (password.length >= 8) strength += 25;
-    if (/[0-9]/.test(password)) strength += 25;
-    if (/[a-z]/.test(password)) strength += 25;
-    if (/[^a-zA-Z0-9]/.test(password)) strength += 25;
-    setPasswordStrength(strength);
+  const fetchSpecializations = async () => {
+    try {
+      const response = await api.get('/specializations');
+      setSpecializations(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch specializations:', error);
+    }
   };
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === 'checkbox' ? checked : value;
-    setFormData({ ...formData, [name]: newValue });
-
-    if (name === 'password') checkPasswordStrength(value);
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -78,14 +46,8 @@ const ProviderRegister = () => {
     setLoading(true);
     setErrors({});
 
-    if (formData.password !== formData.confirmPassword) {
-      setErrors({ confirmPassword: 'Passwords do not match' });
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.agreeToTerms) {
-      setErrors({ agreeToTerms: 'You must agree to the terms and conditions' });
+    if (formData.password !== formData.password_confirmation) {
+      setErrors({ password_confirmation: 'Passwords do not match' });
       setLoading(false);
       return;
     }
@@ -93,39 +55,33 @@ const ProviderRegister = () => {
     try {
       const payload = new FormData();
 
-      payload.append('first_name', formData.firstName);
-      payload.append('last_name', formData.lastName);
+      payload.append('first_name', formData.first_name);
+      payload.append('last_name', formData.last_name);
       payload.append('email', formData.email);
-      payload.append('phone_number', formData.phone);
+      payload.append('phone_number', formData.phone_number);
       payload.append('password', formData.password);
-      payload.append('password_confirmation', formData.confirmPassword);
-      payload.append('specialization', formData.specialization);
-      payload.append('license_number', formData.licenseNumber);
-      payload.append('years_of_experience', formData.experience);
-      payload.append('medical_degree', formData.qualifications);
-      payload.append('clinic_name', formData.clinicName);
-      payload.append('practice_type', formData.practiceType);
+      payload.append('password_confirmation', formData.password_confirmation);
+      payload.append('specialization_id', formData.specialization_id);
+      payload.append('license_number', formData.license_number);
+      payload.append('years_of_experience', formData.years_of_experience);
+      payload.append('address', formData.address);
+      payload.append('bio', formData.bio);
 
-      // ✅ Properly nest clinic_address fields
-      payload.append('clinic_address[street]', formData.street);
-      payload.append('clinic_address[city]', formData.city);
-      payload.append('clinic_address[state]', formData.state);
-      payload.append('clinic_address[zip]', formData.zip);
-
-      if (formData.licenseDocument) {
-        payload.append('license_document', formData.licenseDocument);
-      }
-
-      if (formData.profilePhoto) {
-        payload.append('profile_photo', formData.profilePhoto);
-      }
-
-      await api.post('/provider/register', payload, {
+      const response = await api.post('/provider/register', payload, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      toast.success('Registration successful! Please check your email.');
-      navigate('/login');
+      if (response.success) {
+        setSuccess(true);
+        toast.success('Registration successful! Please check your email for verification.');
+        
+        // Redirect to provider login after successful registration
+        setTimeout(() => {
+          navigate('/provider/login');
+        }, 2000);
+      } else {
+        throw new Error(response.message || 'Registration failed');
+      }
     } catch (error) {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
@@ -151,31 +107,58 @@ const ProviderRegister = () => {
           {/* Personal Information */}
           <section className="space-y-4">
             <h3 className="text-xl font-semibold text-blue-600">Personal Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {['firstName', 'lastName', 'email', 'phone'].map((field) => (
-                <div key={field} className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-700 capitalize mb-1">
-                    {field.replace(/([A-Z])/g, ' $1')}
-                  </label>
-                  <input
-                    type={field === 'email' ? 'email' : 'text'}
-                    name={field}
-                    value={formData[field]}
-                    onChange={handleInputChange}
-                    className="p-3 rounded-md border border-gray-300 shadow-sm text-base"
-                  />
-                  {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
-                </div>
-              ))}
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-2 text-left">First Name</label>
+                <input
+                  type="text"
+                  name="first_name"
+                  value={formData.first_name}
+                  onChange={handleInputChange}
+                  className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
+                />
+                {errors.first_name && <p className="text-red-500 text-sm mt-1">{errors.first_name[0]}</p>}
+              </div>
 
-            <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer">
-              <input {...getInputProps()} />
-              <FiUpload className="mx-auto h-10 w-10 text-gray-400" />
-              <p className="mt-2 text-sm text-gray-600">
-                Drag & drop a profile photo or click to select
-              </p>
-              {imagePreview && <img src={imagePreview} alt="Preview" className="mt-4 h-24 mx-auto rounded-full object-cover" />}
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Last Name</label>
+                <input
+                  type="text"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleInputChange}
+                  className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
+                />
+                {errors.last_name && <p className="text-red-500 text-sm mt-1">{errors.last_name[0]}</p>}
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
+                />
+                {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email[0]}</p>}
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Phone Number</label>
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={handleInputChange}
+                  className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
+                />
+                {errors.phone_number && <p className="text-red-500 text-sm mt-1">{errors.phone_number[0]}</p>}
+              </div>
             </div>
           </section>
 
@@ -187,171 +170,130 @@ const ProviderRegister = () => {
                 <label className="text-sm font-medium text-gray-700 mb-2 text-left">Medical License Number</label>
                 <input
                   type="text"
-                  name="licenseNumber"
-                  value={formData.licenseNumber}
+                  name="license_number"
+                  value={formData.license_number}
                   onChange={handleInputChange}
                   className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
                 />
+                {errors.license_number && <p className="text-red-500 text-sm mt-1">{errors.license_number[0]}</p>}
               </div>
 
               <div className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700 mb-2 text-left">Specialization</label>
                 <select
-                  name="specialization"
-                  value={formData.specialization}
+                  name="specialization_id"
+                  value={formData.specialization_id}
                   onChange={handleInputChange}
                   className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
                 >
                   <option value="">Select specialization</option>
                   {specializations.map((spec) => (
-                    <option key={spec.id} value={spec.name}>{spec.name}</option>
+                    <option key={spec.id} value={spec.id}>{spec.name}</option>
                   ))}
                 </select>
+                {errors.specialization_id && <p className="text-red-500 text-sm mt-1">{errors.specialization_id[0]}</p>}
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Experience (Years)</label>
+                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Years of Experience</label>
                 <input
                   type="number"
-                  name="experience"
-                  value={formData.experience}
+                  name="years_of_experience"
+                  value={formData.years_of_experience}
                   onChange={handleInputChange}
                   className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
                   min={0}
+                  required
                 />
+                {errors.years_of_experience && <p className="text-red-500 text-sm mt-1">{errors.years_of_experience[0]}</p>}
               </div>
 
               <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Qualifications</label>
+                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Address</label>
                 <input
                   type="text"
-                  name="qualifications"
-                  value={formData.qualifications}
+                  name="address"
+                  value={formData.address}
                   onChange={handleInputChange}
                   className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
                 />
+                {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address[0]}</p>}
               </div>
             </div>
-          </section>
 
-          {/* Practice Information */}
-          <section className="space-y-4">
-            <h3 className="text-xl font-semibold text-blue-600">Practice Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Clinic/Hospital Name</label>
-                <input
-                  type="text"
-                  name="clinicName"
-                  value={formData.clinicName}
-                  onChange={handleInputChange}
-                  className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
-                />
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Practice Type</label>
-                <select
-                  name="practiceType"
-                  value={formData.practiceType}
-                  onChange={handleInputChange}
-                  className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
-                >
-                  <option value="">Select type</option>
-                  <option value="Private Practice">Private Practice</option>
-                  <option value="Hospital">Hospital</option>
-                  <option value="Clinic">Clinic</option>
-                </select>
-              </div>
-
-              {['street', 'city', 'state', 'zip'].map((field) => (
-                <div className="flex flex-col" key={field}>
-                  <label className="text-sm font-medium text-gray-700 mb-2 text-left capitalize">
-                    {field}
-                  </label>
-                  <input
-                    type="text"
-                    name={field}
-                    value={formData[field]}
-                    onChange={handleInputChange}
-                    className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
-                  />
-                </div>
-              ))}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-2 text-left">Bio</label>
+              <textarea
+                name="bio"
+                value={formData.bio}
+                onChange={handleInputChange}
+                rows={4}
+                className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                placeholder="Tell us about your medical background and expertise..."
+              />
+              {errors.bio && <p className="text-red-500 text-sm mt-1">{errors.bio[0]}</p>}
             </div>
           </section>
 
           {/* Account Security */}
           <section className="space-y-4">
             <h3 className="text-xl font-semibold text-blue-600">Account Security</h3>
-            {['password', 'confirmPassword'].map((field) => (
-              <div className="flex flex-col" key={field}>
-                <label className="text-sm font-medium text-gray-700 mb-2 text-left capitalize">
-                  {field.replace(/([A-Z])/g, ' $1')}
-                </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Password</label>
                 <input
                   type="password"
-                  name={field}
-                  value={formData[field]}
+                  name="password"
+                  value={formData.password}
                   onChange={handleInputChange}
                   className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
                 />
-                {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
+                {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password[0]}</p>}
               </div>
-            ))}
 
-            <div className="mt-2 h-2 bg-gray-200 rounded-full">
-              <div
-                className={`h-full rounded-full ${
-                  passwordStrength <= 25
-                    ? 'bg-red-500'
-                    : passwordStrength <= 50
-                    ? 'bg-yellow-500'
-                    : passwordStrength <= 75
-                    ? 'bg-blue-500'
-                    : 'bg-green-500'
-                }`}
-                style={{ width: `${passwordStrength}%` }}
-              />
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700 mb-2 text-left">Confirm Password</label>
+                <input
+                  type="password"
+                  name="password_confirmation"
+                  value={formData.password_confirmation}
+                  onChange={handleInputChange}
+                  className="p-4 rounded-md border border-gray-300 shadow-sm text-base"
+                  required
+                />
+                {errors.password_confirmation && <p className="text-red-500 text-sm mt-1">{errors.password_confirmation[0]}</p>}
+              </div>
             </div>
-
-            <div className="flex items-start mt-4">
-              <input
-                type="checkbox"
-                name="agreeToTerms"
-                checked={formData.agreeToTerms}
-                onChange={handleInputChange}
-                className="mr-2 mt-1"
-              />
-              <label className="text-sm text-gray-700">
-                I agree to the{' '}
-                <button
-                  type="button"
-                  onClick={() => alert('Show terms modal or redirect')}
-                  className="text-blue-600 underline bg-transparent border-none p-0 cursor-pointer"
-                >
-                  terms and conditions
-                </button>
-              </label>
-            </div>
-            {errors.agreeToTerms && <p className="text-red-500 text-sm mt-1">{errors.agreeToTerms}</p>}
           </section>
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            className="w-full bg-blue-600 text-white py-4 px-6 rounded-md font-medium text-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           >
-            {loading ? 'Registering...' : 'Register'}
+            {loading ? 'Creating Account...' : 'Create Account'}
           </button>
+        </form>
 
-          <p className="text-center text-sm mt-4">
+        {/* Navigation Links */}
+        <div className="text-center mt-6">
+          <p className="text-sm text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-blue-600 hover:underline">
-              Sign in here
+            <Link to="/provider/login" className="font-medium text-blue-600 hover:text-blue-500">
+              Login here
             </Link>
           </p>
-        </form>
+          <p className="text-sm text-gray-600 mt-2">
+            <Link to="/" className="font-medium text-gray-600 hover:text-gray-500">
+              ← Back to Home
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

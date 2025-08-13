@@ -2,79 +2,73 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+// Components
+import LandingPage from './components/LandingPage';
 import ProviderLogin from './components/ProviderLogin';
 import ProviderRegister from './components/ProviderRegister';
-import PatientRegister from './components/PatientRegister';
 import PatientLogin from './components/PatientLogin';
-import ProviderAvailability from './components/ProviderAvailability';
+import PatientRegister from './components/PatientRegister';
 import ProviderDashboard from './components/ProviderDashboard';
 import PatientDashboard from './components/PatientDashboard';
 import RoleProtectedRoute from './components/RoleProtectedRoute';
-import Unauthorized from './components/Unauthorized';
-import './App.css';
-
-const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  if (!token) return <Navigate to="/login" replace />;
-  return children;
-};
-
-const PublicRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  return token ? <Navigate to="/dashboard" replace /> : children;
-};
 
 function App() {
   return (
     <Router>
       <div className="App">
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+        />
+        
         <Routes>
-
           {/* Public Routes */}
-          <Route path="/login" element={<PublicRoute><ProviderLogin /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><ProviderRegister /></PublicRoute>} />
-          <Route path="/patient/login" element={<PublicRoute><PatientLogin /></PublicRoute>} />
-          <Route path="/patient/register" element={<PublicRoute><PatientRegister /></PublicRoute>} />
-
-          {/* Role Protected Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/provider/login" element={<ProviderLogin />} />
+          <Route path="/provider/register" element={<ProviderRegister />} />
+          <Route path="/patient/login" element={<PatientLogin />} />
+          <Route path="/patient/register" element={<PatientRegister />} />
+          
+          {/* Protected Provider Routes */}
           <Route
-            path="/dashboard"
+            path="/provider/dashboard"
             element={
-              <RoleProtectedRoute allowedRole="provider">
-                <ProviderDashboard />
-              </RoleProtectedRoute>
+              <RoleProtectedRoute
+                allowedRoles={['provider']}
+                redirectTo="/provider/login"
+                component={ProviderDashboard}
+              />
             }
           />
-
-          <Route
-            path="/provider/availability"
-            element={
-              <RoleProtectedRoute allowedRole="provider">
-                <ProviderAvailability />
-              </RoleProtectedRoute>
-            }
-          />
-          {/* Example of patient-protected route */}
+          
+          {/* Protected Patient Routes */}
           <Route
             path="/patient/dashboard"
             element={
-              <RoleProtectedRoute allowedRole="patient">
-                <PatientDashboard />
-              </RoleProtectedRoute>
+              <RoleProtectedRoute
+                allowedRoles={['patient']}
+                redirectTo="/patient/login"
+                component={PatientDashboard}
+              />
             }
           />
-
-          {/* Unauthorized */}
-          <Route path="/unauthorized" element={<Unauthorized />} />
-
-          {/* Default redirect */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-
-          {/* 404 fallback */}
-          <Route path="*" element={<div>404 - Page Not Found</div>} />
+          
+          {/* Default redirects */}
+          <Route path="/dashboard" element={<Navigate to="/provider/dashboard" replace />} />
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/register" element={<Navigate to="/" replace />} />
+          
+          {/* Catch all route - redirect to landing page */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-
-        <ToastContainer position="top-right" autoClose={5000} />
       </div>
     </Router>
   );

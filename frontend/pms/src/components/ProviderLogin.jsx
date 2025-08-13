@@ -86,27 +86,21 @@ export default function ProviderLogin() {
         remember: rememberMe
       });
 
-      // If we reach here, login was successful
-      setSuccess(true);
-      toast.success('Login successful! Redirecting to dashboard...');
-      
-      // Store authentication data correctly
-      const { access_token, refresh_token, provider } = response.data;
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
-      localStorage.setItem('role', 'provider');
-      localStorage.setItem('user', JSON.stringify(provider));
-      
-      console.log('Login successful, stored data:', {
-        access_token: access_token ? 'present' : 'missing',
-        refresh_token: refresh_token ? 'present' : 'missing',
-        role: 'provider',
-        user: provider
-      });
-      
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500); // Slight delay for better UX
+      if (response.success) {
+        // Store tokens and user data
+        localStorage.setItem('access_token', response.data.access_token);
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+        localStorage.setItem('role', 'provider');
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        console.log('Provider login successful:', response.data);
+        toast.success('Login successful!');
+        
+        // Redirect to provider dashboard
+        navigate('/provider/dashboard');
+      } else {
+        throw new Error(response.message || 'Login failed');
+      }
     } catch (error) {
       console.error('Login error:', error);
       let errorMsg = '';
@@ -346,15 +340,16 @@ export default function ProviderLogin() {
           </button>
 
           {/* Registration Link */}
-          <div className="text-center pt-6 border-t border-gray-100">
-            <p className="text-gray-600">
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link
-                to="/register"
-                className="text-blue-600 hover:text-blue-700 font-medium hover:underline
-                  focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded px-2 py-1"
-              >
+              <Link to="/provider/register" className="font-medium text-blue-600 hover:text-blue-500">
                 Register here
+              </Link>
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              <Link to="/" className="font-medium text-gray-600 hover:text-gray-500">
+                ← Back to Home
               </Link>
             </p>
           </div>

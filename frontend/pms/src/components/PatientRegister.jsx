@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../services/api';
 
@@ -35,6 +35,7 @@ const PatientRegister = () => {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -73,8 +74,17 @@ const PatientRegister = () => {
 
     try {
       const response = await api.post('/patient/register', formData);
-      toast.success('Registration successful!');
-      navigate('/login');
+      if (response.success) {
+        setSuccess(true);
+        toast.success('Registration successful! Please check your email for verification.');
+        
+        // Redirect to patient login after successful registration
+        setTimeout(() => {
+          navigate('/patient/login');
+        }, 2000);
+      } else {
+        throw new Error(response.message || 'Registration failed');
+      }
     } catch (error) {
       if (error.response?.data?.errors) {
         setErrors(error.response.data.errors);
@@ -203,7 +213,7 @@ const PatientRegister = () => {
                   {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
                 </div>
               ))}
-            </div>a
+            </div>
           </section>
 
           {/* Terms and Submit */}
@@ -238,6 +248,19 @@ const PatientRegister = () => {
             {loading ? 'Registering...' : 'Register'}
           </button>
         </form>
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link to="/patient/login" className="font-medium text-green-600 hover:text-green-500">
+              Login here
+            </Link>
+          </p>
+          <p className="text-sm text-gray-600 mt-2">
+            <Link to="/" className="font-medium text-gray-600 hover:text-gray-500">
+              ← Back to Home
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -69,13 +69,21 @@ export default function PatientLogin() {
         password,
         remember: rememberMe,
       });
-      setSuccess(true);
-      toast.success('Login successful! Redirecting...');
-      // Token is already stored by patientAuthAPI.login
-      
-      setTimeout(() => {
+      if (response.success) {
+        // Store tokens and user data
+        localStorage.setItem('access_token', response.data.access_token);
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+        localStorage.setItem('role', 'patient');
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        console.log('Patient login successful:', response.data);
+        toast.success('Login successful!');
+        
+        // Redirect to patient dashboard
         navigate('/patient/dashboard');
-      }, 1500);
+      } else {
+        throw new Error(response.message || 'Login failed');
+      }
     } catch (error) {
       let errorMsg = error.message || 'Something went wrong. Try again.';
       if (error.errors) {
@@ -211,10 +219,17 @@ export default function PatientLogin() {
             )}
           </button>
 
-          <div className="text-center pt-6 border-t border-gray-100">
-            <p className="text-gray-600">
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/patient/register" className="text-green-600 hover:text-green-700 font-medium hover:underline">Register here</Link>
+              <Link to="/patient/register" className="font-medium text-green-600 hover:text-green-500">
+                Register here
+              </Link>
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              <Link to="/" className="font-medium text-gray-600 hover:text-gray-500">
+                ← Back to Home
+              </Link>
             </p>
           </div>
 
