@@ -89,8 +89,21 @@ export default function ProviderLogin() {
       // If we reach here, login was successful
       setSuccess(true);
       toast.success('Login successful! Redirecting to dashboard...');
-      localStorage.setItem('token', response.data.token);
+      
+      // Store authentication data correctly
+      const { access_token, refresh_token, provider } = response.data;
+      localStorage.setItem('access_token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
       localStorage.setItem('role', 'provider');
+      localStorage.setItem('user', JSON.stringify(provider));
+      
+      console.log('Login successful, stored data:', {
+        access_token: access_token ? 'present' : 'missing',
+        refresh_token: refresh_token ? 'present' : 'missing',
+        role: 'provider',
+        user: provider
+      });
+      
       setTimeout(() => {
         navigate('/dashboard');
       }, 1500); // Slight delay for better UX

@@ -18,11 +18,24 @@ class Appointment extends Model
         'vitals',
         'status',
         'notes',
+        'evaluation_notes',
+        'diagnosis',
+        'treatment_plan',
+        'prescriptions',
+        'follow_up_date',
+        'vital_signs',
+        'next_appointment_date',
+        'completed_at',
     ];
 
     protected $casts = [
         'vitals' => 'array',
         'episode_date' => 'date',
+        'prescriptions' => 'array',
+        'vital_signs' => 'array',
+        'follow_up_date' => 'date',
+        'next_appointment_date' => 'date',
+        'completed_at' => 'datetime',
     ];
 
     // Automatically generate UUID

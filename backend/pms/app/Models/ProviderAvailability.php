@@ -11,21 +11,32 @@ class ProviderAvailability extends Model
     use HasFactory;
     // use HasUuids;
 
-
     protected $fillable = [
-        'provider_id', 'date', 'start_time', 'end_time', 'timezone',
-        'is_recurring', 'recurrence_pattern', 'recurrence_end_date',
-        'slot_duration', 'break_duration', 'status', 'max_appointments_per_slot',
-        'current_appointments', 'appointment_type', 'location', 'pricing',
-        'notes', 'special_requirements'
+        'provider_id',
+        'day_of_week',
+        'specific_date',
+        'availability_type',
+        'start_time',
+        'end_time',
+        'is_available',
+        'time_zone',
+        'block_date',
+        'block_from_time',
+        'block_to_time'
     ];
 
     protected $casts = [
-        'location' => 'array',
-        'pricing' => 'array',
-        'special_requirements' => 'array',
-        'is_recurring' => 'boolean',
+        'is_available' => 'boolean',
+        'specific_date' => 'date',
+        'block_date' => 'date',
+        'start_time' => 'datetime:H:i:s',
+        'end_time' => 'datetime:H:i:s',
     ];
+
+    public function provider()
+    {
+        return $this->belongsTo(Provider::class);
+    }
 
     public function slots()
     {

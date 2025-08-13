@@ -71,9 +71,8 @@ export default function PatientLogin() {
       });
       setSuccess(true);
       toast.success('Login successful! Redirecting...');
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('role', 'patient');
-
+      // Token is already stored by patientAuthAPI.login
+      
       setTimeout(() => {
         navigate('/patient/dashboard');
       }, 1500);

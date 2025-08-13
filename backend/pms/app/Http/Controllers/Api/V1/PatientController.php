@@ -161,4 +161,283 @@ class PatientController extends Controller
             'message' => 'Phone number verified successfully'
         ]);
     }
+
+    /**
+     * Get patient profile
+     */
+    public function profile(): JsonResponse
+    {
+        try {
+            $patient = auth()->user();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile retrieved successfully',
+                'data' => $patient
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve profile'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all available providers
+     */
+    public function getProviders(): JsonResponse
+    {
+        try {
+            $providers = \App\Models\Provider::where('is_active', true)
+                ->where('verification_status', 'verified')
+                ->select('id', 'first_name', 'last_name', 'specialization', 'years_of_experience')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Providers retrieved successfully',
+                'data' => $providers
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve providers'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get available slots for a specific provider on a specific date
+     */
+    public function getProviderAvailableSlots($providerId, \Illuminate\Http\Request $request): JsonResponse
+    {
+        try {
+            $date = $request->input('date');
+            
+            if (!$date) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Date is required'
+                ], 400);
+            }
+            
+            // Get the day of week for the selected date
+            $dayOfWeek = strtolower(date('l', strtotime($date)));
+            
+            // Get availability for this specific date and day of week
+            $availabilities = \App\Models\ProviderAvailability::where('provider_id', $providerId)
+                ->where(function($query) use ($date, $dayOfWeek) {
+                    $query->where(function($q) use ($dayOfWeek) {
+                        $q->where('availability_type', 'weekly')
+                          ->where('day_of_week', $dayOfWeek)
+                          ->where('is_available', true);
+                    })->orWhere(function($q) use ($date) {
+                        $q->where('availability_type', 'specific_date')
+                          ->where('specific_date', $date)
+                          ->where('is_available', true);
+                    });
+                })
+                ->get();
+            
+            if ($availabilities->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'No availability for this date',
+                    'data' => []
+                ]);
+            }
+            
+            // Get existing appointments for this date to block booked slots
+            $existingAppointments = \App\Models\Appointment::where('provider_id', $providerId)
+                ->whereDate('episode_date', $date)
+                ->get();
+            
+            $bookedTimes = $existingAppointments->pluck('episode_details')->toArray();
+            
+            // Generate available time slots (30-minute intervals)
+            $availableSlots = [];
+            
+            foreach ($availabilities as $availability) {
+                $startTime = $availability->start_time;
+                $endTime = $availability->end_time;
+                
+                // Handle both time strings and datetime objects
+                $startTimeStr = is_string($startTime) ? $startTime : $startTime->format('H:i:s');
+                $endTimeStr = is_string($endTime) ? $endTime : $endTime->format('H:i:s');
+                
+                $startMinutes = $this->timeToMinutes($startTimeStr);
+                $endMinutes = $this->timeToMinutes($endTimeStr);
+                
+                // Generate 30-minute slots
+                for ($time = $startMinutes; $time < $endMinutes; $time += 30) {
+                    $slotTime = $this->minutesToTime($time);
+                    $slotTimeFormatted = $this->formatTimeForDisplay($slotTime);
+                    
+                    // Check if this slot is already booked
+                    $isBooked = in_array($slotTimeFormatted, $bookedTimes);
+                    
+                    if (!$isBooked) {
+                        $availableSlots[] = [
+                            'time' => $slotTime,
+                            'display_time' => $slotTimeFormatted,
+                            'available' => true
+                        ];
+                    } else {
+                        $availableSlots[] = [
+                            'time' => $slotTime,
+                            'display_time' => $slotTimeFormatted,
+                            'available' => false
+                        ];
+                    }
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Available slots retrieved successfully',
+                'data' => $availableSlots
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get available slots'
+            ], 500);
+        }
+    }
+
+    /**
+     * Book an appointment
+     */
+    public function bookAppointment(\Illuminate\Http\Request $request): JsonResponse
+    {
+        try {
+            $patient = auth()->user();
+            
+            $validated = $request->validate([
+                'provider_id' => 'required|exists:providers,id',
+                'appointment_date' => 'required|date|after_or_equal:today',
+                'appointment_time' => 'required|string',
+                'episode_details' => 'required|string|max:1000',
+                'vitals' => 'nullable|string|max:500',
+                'episode_occur_date' => 'required|date|before_or_equal:today',
+            ]);
+            
+            // Check if the slot is still available
+            $dayOfWeek = strtolower(date('l', strtotime($validated['appointment_date'])));
+            
+            $availability = \App\Models\ProviderAvailability::where('provider_id', $validated['provider_id'])
+                ->where(function($query) use ($validated, $dayOfWeek) {
+                    $query->where(function($q) use ($dayOfWeek) {
+                        $q->where('availability_type', 'weekly')
+                          ->where('day_of_week', $dayOfWeek)
+                          ->where('is_available', true);
+                    })->orWhere(function($q) use ($validated) {
+                        $q->where('availability_type', 'specific_date')
+                          ->where('specific_date', $validated['appointment_date'])
+                          ->where('is_available', true);
+                    });
+                })
+                ->first();
+            
+            if (!$availability) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected time slot is not available'
+                ], 400);
+            }
+            
+            // Check if slot is already booked
+            $existingAppointment = \App\Models\Appointment::where('provider_id', $validated['provider_id'])
+                ->whereDate('episode_date', $validated['appointment_date'])
+                ->where('episode_details', $validated['appointment_time'])
+                ->first();
+            
+            if ($existingAppointment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected time slot is already booked'
+                ], 400);
+            }
+            
+            // Create the appointment
+            $appointment = \App\Models\Appointment::create([
+                'provider_id' => $validated['provider_id'],
+                'patient_id' => $patient->id,
+                'episode_date' => $validated['appointment_date'],
+                'episode_details' => $validated['appointment_time'],
+                'episode_type' => 'consultation',
+                'status' => 'scheduled',
+                'notes' => $validated['episode_details'],
+                'uuid' => \Illuminate\Support\Str::uuid(),
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Appointment booked successfully',
+                'data' => $appointment
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to book appointment'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get patient appointments
+     */
+    public function getAppointments(): JsonResponse
+    {
+        try {
+            $patient = auth()->user();
+            
+            $appointments = \App\Models\Appointment::where('patient_id', $patient->id)
+                ->with('provider:id,first_name,last_name,specialization')
+                ->orderBy('episode_date', 'desc')
+                ->get();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Appointments retrieved successfully',
+                'data' => $appointments
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve appointments'
+            ], 500);
+        }
+    }
+
+    /**
+     * Convert time string to minutes.
+     */
+    private function timeToMinutes($time)
+    {
+        $parts = explode(':', $time);
+        return intval($parts[0]) * 60 + intval($parts[1]);
+    }
+    
+    /**
+     * Convert minutes to time string.
+     */
+    private function minutesToTime($minutes)
+    {
+        $hours = floor($minutes / 60);
+        $mins = $minutes % 60;
+        return sprintf('%02d:%02d:00', $hours, $mins);
+    }
+    
+    /**
+     * Format time for display (12-hour format).
+     */
+    private function formatTimeForDisplay($time)
+    {
+        $dateTime = new \DateTime($time);
+        return $dateTime->format('g:i A');
+    }
 }

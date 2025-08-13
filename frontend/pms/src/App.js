@@ -7,11 +7,11 @@ import ProviderRegister from './components/ProviderRegister';
 import PatientRegister from './components/PatientRegister';
 import PatientLogin from './components/PatientLogin';
 import ProviderAvailability from './components/ProviderAvailability';
+import ProviderDashboard from './components/ProviderDashboard';
+import PatientDashboard from './components/PatientDashboard';
 import RoleProtectedRoute from './components/RoleProtectedRoute';
 import Unauthorized from './components/Unauthorized';
-import Navbar from './components/Navbar';
 import './App.css';
-import BookAppointment from './components/BookAppoinment';
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -28,7 +28,6 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <Navbar />
         <Routes>
 
           {/* Public Routes */}
@@ -42,6 +41,15 @@ function App() {
             path="/dashboard"
             element={
               <RoleProtectedRoute allowedRole="provider">
+                <ProviderDashboard />
+              </RoleProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/provider/availability"
+            element={
+              <RoleProtectedRoute allowedRole="provider">
                 <ProviderAvailability />
               </RoleProtectedRoute>
             }
@@ -51,7 +59,7 @@ function App() {
             path="/patient/dashboard"
             element={
               <RoleProtectedRoute allowedRole="patient">
-                <BookAppointment />
+                <PatientDashboard />
               </RoleProtectedRoute>
             }
           />
